@@ -1,0 +1,218 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-11-24T11:00:00.000Z",
+  "__export_source": "insomnia.desktop.app",
+  "resources": [
+    {
+      "_id": "req_local_upload",
+      "parentId": "wrk_integrador_vio",
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "url": "http://localhost:8000/api/validar-localmente-imagem",
+      "name": "1. [LOCAL/OFFLINE] Upload Imagem",
+      "description": "Extrai bytes do QR Code da imagem, gera Base64 e valida 100% offline via digital-document-checker",
+      "method": "POST",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "value": ""
+          },
+          {
+            "name": "include_raw",
+            "value": "false"
+          }
+        ]
+      },
+      "headers": [],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_local_json",
+      "parentId": "wrk_integrador_vio",
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "url": "http://localhost:8000/api/validar-localmente",
+      "name": "2. [LOCAL/OFFLINE] JSON (Base64 / Caminho)",
+      "description": "Valida localmente documento via caminho de arquivo ou imagem em Base64",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"caminho_imagem\": \"C:/caminho/para/documento.png\",\n  \"imagem_base64\": null,\n  \"qrcode_base64\": null,\n  \"include_raw\": false\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_vio_upload",
+      "parentId": "wrk_integrador_vio",
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "url": "http://localhost:8000/api/consultar-imagem",
+      "name": "3. [REMOTA/VIO] Upload Imagem",
+      "description": "Envia imagem, extrai bytes, reconstrói QR e consulta API VIO Serpro",
+      "method": "POST",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "value": ""
+          },
+          {
+            "name": "wait",
+            "value": "true"
+          },
+          {
+            "name": "incluir_qrcode_base64",
+            "value": "false"
+          }
+        ]
+      },
+      "headers": [],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_vio_json",
+      "parentId": "wrk_integrador_vio",
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "url": "http://localhost:8000/api/consultar",
+      "name": "4. [REMOTA/VIO] JSON (Base64 / Caminho)",
+      "description": "Consulta API VIO Serpro via JSON",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"caminho_imagem\": \"C:/caminho/para/documento.png\",\n  \"wait\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_ocr_upload",
+      "parentId": "wrk_integrador_vio",
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "url": "http://localhost:8000/api/ocr-crlv-imagem",
+      "name": "5. [EASYOCR/CRLV] Upload Imagem / PDF",
+      "description": "Leitura OCR de CRLV com EasyOCR e validação de âncoras/posicionamento",
+      "method": "POST",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "value": ""
+          },
+          {
+            "name": "margem_erro",
+            "value": "0.10"
+          }
+        ]
+      },
+      "headers": [],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_ocr_json",
+      "parentId": "wrk_integrador_vio",
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "url": "http://localhost:8000/api/ocr-crlv",
+      "name": "6. [EASYOCR/CRLV] JSON (Base64 / Caminho)",
+      "description": "Leitura OCR de CRLV com EasyOCR via caminho ou Base64",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"caminho_arquivo\": \"C:/caminho/para/crlv.pdf\",\n  \"imagem_base64\": null,\n  \"margem_erro\": 0.10\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_paddle_upload",
+      "parentId": "wrk_integrador_vio",
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "url": "http://localhost:8000/api/paddleocr-crlv-imagem",
+      "name": "7. [PADDLEOCR/CRLV] Upload Imagem / PDF",
+      "description": "Leitura OCR de CRLV com PaddleOCR (PP-OCRv6 ONNX) e validação de âncoras",
+      "method": "POST",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "value": ""
+          },
+          {
+            "name": "margem_erro",
+            "value": "0.10"
+          }
+        ]
+      },
+      "headers": [],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_paddle_json",
+      "parentId": "wrk_integrador_vio",
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "url": "http://localhost:8000/api/paddleocr-crlv",
+      "name": "8. [PADDLEOCR/CRLV] JSON (Base64 / Caminho)",
+      "description": "Leitura OCR de CRLV com PaddleOCR (PP-OCRv6 ONNX) via caminho ou Base64",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"caminho_arquivo\": \"C:/caminho/para/crlv.pdf\",\n  \"imagem_base64\": null,\n  \"margem_erro\": 0.10\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "wrk_integrador_vio",
+      "parentId": null,
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "name": "Integrador VIO & Digital Document Checker & OCR",
+      "description": "Validação remota VIO, local via Checker e leitura OCR (EasyOCR & PaddleOCR)",
+      "scope": "collection",
+      "_type": "workspace"
+    }
+  ]
+}

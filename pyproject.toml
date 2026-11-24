@@ -1,0 +1,49 @@
+[project]
+name = "teste-leitor-crlv"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "jbarros-gfvc", email = "julio@grupofvcereais.com.br" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "cryptography>=42.0.0",
+    "digital-document-checker",
+    "easyocr>=1.7.2",
+    "fastapi>=0.162.5",
+    "numpy>=2.3.0",
+    "onnxruntime>=1.20.0",
+    "opencv-python-headless>=4.10.0",
+    "paddleocr>=3.7.0",
+    "paddlepaddle>=3.3.1",
+    "pillow>=13.0.0",
+    "pymupdf>=2.1",
+    "python-multipart>=0.0.34",
+    "segno>=1.6.6",
+    "uvicorn>=0.54.0",
+    "vio-api",
+    "zxing-cpp>=3.1.1",
+]
+
+[project.scripts]
+teste-leitor-crlv = "teste_leitor_crlv:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+vio-api = { git = "https://github.com/kejrra/integrador-vio" }
+digital-document-checker = { git = "https://github.com/helviojunior/digital-document-checker" }
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "ruff>=0.17.6",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
