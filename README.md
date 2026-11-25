@@ -44,7 +44,36 @@ Swagger UI interativo: `http://localhost:8000/docs`
 
 ---
 
-## 5. Endpoints Leitura PaddleOCR (Novo)
+## 5. Endpoints Leitura PaddleOCR & Feedback
 
 - **POST** `/api/paddleocr-crlv-imagem` (Multipart Form)
 - **POST** `/api/paddleocr-crlv` (JSON)
+- **POST** `/api/paddleocr-feedback` (JSON de correção manual para retreino)
+
+Exemplo de Feedback Manual:
+```json
+POST /api/paddleocr-feedback
+{
+  "id_amostra": "20261124_135322_90b90f40",
+  "placa_correta": "ABC1D23",
+  "renavam_correto": "00381050920",
+  "observacoes": "Troca de O por 0"
+}
+```
+
+---
+
+## 6. Treinamento e Retreino Local (Active Learning)
+
+O sistema aprende com fotos adicionadas e feedbacks registrados sem necessidade de marcação manual em imagem:
+
+```bash
+# 1. Gera dataset (recorta bboxes e aplica anotações de fotos e feedbacks)
+uv run python treinamento/preparar_dataset.py
+
+# 2. Treina a rede CRNN PyTorch e converte para ONNX
+uv run python treinamento/treinar_modelo.py
+```
+
+O modelo `treinamento/modelos/crnn_crlv.onnx` gerado é carregado automaticamente pela API.
+

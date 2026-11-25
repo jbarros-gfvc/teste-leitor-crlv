@@ -108,7 +108,132 @@ graph TD
 
 ---
 
-## 4. Como Executar
+## 4. Guia Completo: Retroalimentação, Feedback e Treinamento
+
+O pipeline de PaddleOCR + CRNN possui arquitetura de **Active Learning** (aprendizado contínuo semi-supervisionado).
+
+### Como Funciona o Ciclo de Retroalimentação
+
+```mermaid
+flowchart TD
+    Doc["Documento Enviado à API"] --> Det["1. Detecção Textual (DBNet ONNX)"]
+    Det --> Rec["2. Reconhecimento (CRNN Local ONNX)"]
+    Rec --> Val{"3. Validação de Regras (Placa + RENAVAM)"}
+    
+    Val -- "Válido" --> RespOK["Resposta com Sucesso"]
+    Val -- "Falha de Leitura" --> SaveFail["4. Salva Imagem em dados_treinamento/falhas/<br/>Gera id_amostra"]
+    
+    SaveFail --> UserFeedback["5. Usuário envia POST /api/paddleocr-feedback<br/>(com placa e renavam corretos)"]
+    UserFeedback --> JSONUpdate["Atualiza dados_treinamento/falhas/{id_amostra}.json"]
+    
+    JSONUpdate --> Prep["6. Executa preparar_dataset.py<br/>(Corta bboxes e aplica anotações corrigidas)"]
+    Prep --> Train["7. Executa treinar_modelo.py<br/>(Treina PyTorch e exporta ONNX)"]
+    Train --> NewWeights["8. Novo crnn_crlv.onnx ativo imediatamente"]
+```
+
+### 1. Envio de Feedback Manual
+
+> [!NOTE]
+> **Não é necessário marcar nem desenhar na imagem.**
+> O detector DBNet já calcula as coordenadas das caixas de texto. O feedback manual serve exclusivamente para fornecer o texto correto caso o OCR tenha confundido caracteres.
+
+Quando uma imagem falha na validação, a API retorna o campo `id_amostra_salva`:
+
+```json
+{
+  "sucesso": false,
+  "modo": "leitura_documentos_paddleocr",
+  "analise": {
+    "formato_crlv_valido": false,
+    "placa": null,
+    "renavam": "00381050920",
+    "id_amostra_salva": "20261124_135322_90b90f40"
+  }
+}
+```
+
+Para enviar a correção, faça uma requisição `POST /api/paddleocr-feedback`:
+
+- **Endpoint**: `POST http://localhost:8000/api/paddleocr-feedback`
+- **Headers**: `Content-Type: application/json`
+- **Body**:
+
+```json
+{
+  "id_amostra": "20261124_135322_90b90f40",
+  "placa_correta": "ABC1D23",
+  "renavam_correto": "00381050920",
+  "observacoes": "Troca de O por 0 na placa"
+}
+```
+
+- **Resposta da API**:
+```json
+{
+  "sucesso": true,
+  "mensagem": "Feedback gravado com sucesso para retreino."
+}
+```
+
+---
+
+### 2. Adicionando Novas Imagens para Treinamento
+
+Além das falhas capturadas pela API, você pode incluir novos lotes de fotos a qualquer momento:
+
+1. Coloque fotos de CRLV (JPG/PNG) na pasta `imgs/`.
+2. As imagens serão automaticamente processadas e recortadas no próximo passo.
+
+---
+
+### 3. Passo a Passo de Execução do Treinamento
+
+#### Passo 1: Preparar o Dataset
+Lê a pasta `imgs/` e a pasta `dados_treinamento/falhas/` (aplicando correções manuais se houverem), recorta cada linha de texto e gera o arquivo `treinamento/dataset/labels.txt`:
+
+```bash
+uv run python treinamento/preparar_dataset.py
+```
+
+*Saída esperada:*
+```text
+[1/3] Inicializando PaddleOCR...
+[2/3] Processando 18 imagens de amostra em 'imgs'...
+  -> [1/18] foto1.jpg: 17 recortes gerados
+[2.1/3] Processando amostras ativas em 'dados_treinamento/falhas'...
+  -> Falha [1/2] 20261124_135322_90b90f40.jpg: 8 recortes (com feedback manual)
+[3/3] Concluído! Total de 317 recortes salvos em 'treinamento/dataset/images'.
+```
+
+#### Passo 2: Treinar a Rede CRNN e Exportar ONNX
+Treina a rede neural convolucional-recorrente (PyTorch) usando CTC Loss, salva os pesos `.pth` e converte automaticamente para `.onnx`:
+
+```bash
+uv run python treinamento/treinar_modelo.py
+```
+
+*Parâmetros padrão:*
+- **Épocas**: 20 (ajustável no script)
+- **Batch Size**: 16
+- **Learning Rate**: 0.0005 com otimizador AdamW
+- **Saídas geradas**:
+  - `treinamento/modelos/crnn_crlv.pth` (pesos PyTorch)
+  - `treinamento/modelos/crnn_crlv.onnx` (modelo de inferência de alta velocidade)
+  - `treinamento/modelos/vocabulario.json` (dicionário de caracteres mapeados)
+
+---
+
+### 4. Como a API Passa a Usar o Novo Modelo
+
+A transição é **100% transparente**:
+
+1. A API verifica a existência do arquivo `treinamento/modelos/crnn_crlv.onnx`.
+2. Assim que o arquivo for atualizado pelo comando de treino, o `ReconhecedorCRNNLocal` passa a inferir com os novos pesos nas próximas requisições.
+3. Se o arquivo `.onnx` for apagado ou movido, a API volta automaticamente a utilizar o modelo base global do PaddleOCR (fallback seguro sem quebrar o sistema).
+
+---
+
+## 5. Como Executar a API
 
 ```bash
 # Executar a API via script registrado
