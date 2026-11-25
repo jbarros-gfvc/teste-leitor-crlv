@@ -24,6 +24,11 @@ from teste_leitor_crlv.analise_paddleocr import (
     analisar_crlv_com_paddleocr,
     ocr_paddle_json,
 )
+from teste_leitor_crlv.analise_paralela import (
+    AnaliseRapidaRequest,
+    analisar_rapido_json,
+    orquestrar_corrida_paralela,
+)
 from teste_leitor_crlv.analise_vio import (
     ConsultaVioRequest,
     consultar_json,
@@ -272,6 +277,48 @@ class TestVioAndLocalChecker(unittest.TestCase):
         self.assertTrue(meta.qrcode_info["bytes_length"] > 0)
         self.assertLessEqual(crop_rgb.shape[1], 1200)
         self.assertLessEqual(crop_rgb.shape[0], 800)
+
+    @patch("teste_leitor_crlv.analise_paralela._executar_digital_checker")
+    @patch("teste_leitor_crlv.analise_paralela._executar_easyocr")
+    @patch("teste_leitor_crlv.analise_paralela._executar_paddleocr")
+    def test_corrida_paralela_vencedor_checker(self, mock_paddle, mock_easy, mock_checker):
+        mock_checker.return_value = {
+            "sucesso": True,
+            "analisador": "digital_document_checker",
+            "tempo_ms": 12.5,
+            "dados": {"status": {"is_parsed": True}, "document": {"numero_espelho": "123"}},
+        }
+        mock_easy.return_value = {"sucesso": False, "analisador": "easyocr", "tempo_ms": 450.0}
+        mock_paddle.return_value = {"sucesso": False, "analisador": "paddleocr", "tempo_ms": 300.0}
+
+        img_bytes = b"fake_crlv_bytes"
+        res = orquestrar_corrida_paralela(
+            imagem_bytes=img_bytes,
+            margem_erro=0.10,
+            garantir_treino_paddle=True,
+        )
+
+        self.assertTrue(res["sucesso"])
+        self.assertEqual(res["vencedor_corrida"], "digital_document_checker")
+        self.assertTrue(res["paddle_coletando_em_background"])
+        self.assertEqual(res["resultado"]["document"]["numero_espelho"], "123")
+
+    @patch("teste_leitor_crlv.analise_paralela.orquestrar_corrida_paralela")
+    def test_endpoint_analisar_rapido_json(self, mock_orquestrador):
+        mock_orquestrador.return_value = {
+            "sucesso": True,
+            "vencedor_corrida": "paddleocr",
+            "tempo_resposta_ms": 180.2,
+            "paddle_coletando_em_background": False,
+            "resultado": {"placa": "ABC1D23", "renavam": "12345678901"},
+        }
+        b64 = base64.b64encode(b"dummy_image").decode("ascii")
+        req = AnaliseRapidaRequest(imagem_base64=b64, garantir_treino_paddle=True)
+        res = analisar_rapido_json(req)
+
+        self.assertTrue(res["sucesso"])
+        self.assertEqual(res["vencedor_corrida"], "paddleocr")
+        self.assertEqual(res["resultado"]["placa"], "ABC1D23")
 
 
 if __name__ == "__main__":

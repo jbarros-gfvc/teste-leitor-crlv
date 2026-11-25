@@ -12,16 +12,21 @@ O ponto de convergência de todos os analisadores é o arquivo [src/teste_leitor
 ```mermaid
 graph TD
     Client[Cliente / Insomnia / Swagger] --> App[app.py - FastAPI]
+    App --> ModParalelo["analise_paralela.py - Corrida Multithread (Rápido)"]
+    ModParalelo --> ModLocal[analise_local.py - Digital Document Checker]
+    ModParalelo --> ModEasy[analise_ocr.py - EasyOCR]
+    ModParalelo --> ModPaddle[analise_paddleocr.py - PaddleOCR ONNX]
     App --> QRUtils[qrcode_utils.py]
     App --> ModVio[analise_vio.py - Serpro Remoto]
-    App --> ModLocal[analise_local.py - Digital Document Checker]
-    App --> ModEasy[analise_ocr.py - EasyOCR]
-    App --> ModPaddle[analise_paddleocr.py - PaddleOCR ONNX]
+    App --> ModLocal
+    App --> ModEasy
+    App --> ModPaddle
     ModPaddle --> RecLocal[reconhecedor_local.py - Modelo Treinado]
     RecLocal --> ModeloWeights[(treinamento/modelos/crnn_crlv.onnx)]
 ```
 
-- **Entrypoint**: [app.py](file:///C:/Users/user/Documents/teste-leitor-crlv/src/teste_leitor_crlv/app.py) inicializa a aplicação FastAPI e registra os 4 roteadores (`APIRouter`).
+- **Entrypoint**: [app.py](file:///C:/Users/user/Documents/teste-leitor-crlv/src/teste_leitor_crlv/app.py) inicializa a aplicação FastAPI e registra os roteadores (`APIRouter`).
+- **Orquestrador Paralelo Multithread**: [analise_paralela.py](file:///C:/Users/user/Documents/teste-leitor-crlv/src/teste_leitor_crlv/analise_paralela.py) dispara DigitalDocumentChecker, EasyOCR e PaddleOCR simultaneamente, entregando a resposta do primeiro que tiver sucesso e garantindo o processamento do PaddleOCR em segundo plano para retreino.
 - **Enquadramento e Alinhamento**: [enquadramento.py](file:///C:/Users/user/Documents/teste-leitor-crlv/src/teste_leitor_crlv/enquadramento.py) recorta a área útil do cartão antes do OCR através de âncoras geométricas (QR Code à direita, texto Vio e faixa superior escura).
 - **Utilitário Compartilhado**: [qrcode_utils.py](file:///C:/Users/user/Documents/teste-leitor-crlv/src/teste_leitor_crlv/qrcode_utils.py) provê `extrair_bytes_qrcode` (`zxing-cpp`) e `gerar_qrcode_base64` (`segno`).
 - **Endpoint Raiz de Descoberta**: `GET http://localhost:8000/` retorna o status e catálogo de todos os modos disponíveis.
@@ -114,6 +119,22 @@ graph TD
     "qrcode_detectado": true
   }
   ```
+
+---
+
+### Analisador 5: Análise Rápida Paralela (Corrida Multithread)
+- **Arquivo**: [src/teste_leitor_crlv/analise_paralela.py](file:///C:/Users/user/Documents/teste-leitor-crlv/src/teste_leitor_crlv/analise_paralela.py)
+- **Objetivo**: Máxima velocidade de resposta com aprendizado contínuo garantido em segundo plano.
+- **Funcionamento**:
+  1. Ao receber o documento, o orquestrador submete simultaneamente:
+     - Thread 1: `DigitalDocumentChecker` (validação de QR Code por criptografia local, ~10ms a 30ms)
+     - Thread 2: `EasyOCR` (análise geométrica de texto)
+     - Thread 3: `PaddleOCR` (PP-OCRv6 com modelo local treinado)
+  2. O primeiro que responder com sucesso (`sucesso: True`) é retornado de imediato ao cliente HTTP.
+  3. **Garantia de Treino em Background**: Se outro analisador vencer primeiro (ex: DigitalDocumentChecker em 15ms), a thread do PaddleOCR continua executando em background caso `garantir_treino_paddle=True`. Se o Paddle falhar na validação, os dados são salvos em `dados_treinamento/falhas/` normalmente para alimentar o próximo retreino.
+- **Endpoints**:
+  - `POST /api/analisar-rapido-imagem` (`multipart/form-data`: `file`, `garantir_treino_paddle`, `margem_erro`)
+  - `POST /api/analisar-rapido` (JSON: `caminho_arquivo`, `imagem_base64`, `garantir_treino_paddle`, `margem_erro`)
 
 ---
 

@@ -205,6 +205,59 @@
       "_type": "request"
     },
     {
+      "_id": "req_rapido_upload",
+      "parentId": "wrk_integrador_vio",
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "url": "http://localhost:8000/api/analisar-rapido-imagem",
+      "name": "9. [PARALELO/RÁPIDO] Upload (Primeiro com Sucesso)",
+      "description": "Executa DigitalDocumentChecker, EasyOCR e PaddleOCR em paralelo. Retorna o primeiro vencedor e mantém PaddleOCR em background para coleta de treino",
+      "method": "POST",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "value": ""
+          },
+          {
+            "name": "garantir_treino_paddle",
+            "value": "true"
+          },
+          {
+            "name": "margem_erro",
+            "value": "0.10"
+          }
+        ]
+      },
+      "headers": [],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_rapido_json",
+      "parentId": "wrk_integrador_vio",
+      "modified": 1700000000000,
+      "created": 1700000000000,
+      "url": "http://localhost:8000/api/analisar-rapido",
+      "name": "10. [PARALELO/RÁPIDO] JSON (Base64 / Caminho)",
+      "description": "Corrida multithread em JSON: retorna o primeiro com sucesso e garante PaddleOCR em segundo plano para treino",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"caminho_arquivo\": \"C:/caminho/para/documento.jpg\",\n  \"imagem_base64\": null,\n  \"garantir_treino_paddle\": true,\n  \"margem_erro\": 0.10\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
       "_id": "wrk_integrador_vio",
       "parentId": null,
       "modified": 1700000000000,

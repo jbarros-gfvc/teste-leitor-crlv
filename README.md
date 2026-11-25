@@ -24,7 +24,16 @@ Swagger UI interativo: `http://localhost:8000/docs`
 
 ---
 
-## 2. Endpoints Locais / Offline (`digital-document-checker`)
+## 2. Endpoints Análise Rápida Paralela (Novo)
+
+Executa DigitalDocumentChecker, EasyOCR e PaddleOCR em paralelo. Retorna o primeiro vencedor e mantém o PaddleOCR rodando em background para alimentar a base de retreino:
+
+- **POST** `/api/analisar-rapido-imagem` (Multipart Form)
+- **POST** `/api/analisar-rapido` (JSON)
+
+---
+
+## 3. Endpoints Locais / Offline (`digital-document-checker`)
 
 - **POST** `/api/validar-localmente-imagem` (Multipart Form)
 - **POST** `/api/validar-localmente` (JSON)

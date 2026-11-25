@@ -10,14 +10,17 @@ from .analise_ocr import (
 from .analise_paddleocr import (
     router as paddle_router,
 )
+from .analise_paralela import (
+    router as paralelo_router,
+)
 from .analise_vio import (
     router as vio_router,
 )
 
 app = FastAPI(
-    title="API Integrador VIO & Digital Document Checker & OCR (EasyOCR & PaddleOCR)",
-    description="Validação via API Serpro VIO (remota), Digital Document Checker (offline) e OCR de documentos (EasyOCR e PaddleOCR)",
-    version="0.6.0",
+    title="API Leitor CRLV (Digital Document Checker, EasyOCR, PaddleOCR & VIO)",
+    description="Validação via API Serpro VIO, Digital Document Checker (offline), EasyOCR, PaddleOCR e corrida multithread de alta velocidade",
+    version="0.7.0",
 )
 
 # Registra os módulos de análise por responsabilidade
@@ -25,6 +28,7 @@ app.include_router(vio_router)
 app.include_router(local_router)
 app.include_router(ocr_router)
 app.include_router(paddle_router)
+app.include_router(paralelo_router)
 
 
 @app.get("/", tags=["Status"])
@@ -32,6 +36,10 @@ def raiz():
     return {
         "status": "online",
         "modos": {
+            "analise_rapida_paralela": {
+                "upload": "POST /api/analisar-rapido-imagem (multipart/form-data)",
+                "json": "POST /api/analisar-rapido (JSON)",
+            },
             "remoto_api_vio": {
                 "upload": "POST /api/consultar-imagem (multipart/form-data)",
                 "json": "POST /api/consultar (JSON)",
