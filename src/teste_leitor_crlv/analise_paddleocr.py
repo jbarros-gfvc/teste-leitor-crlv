@@ -308,10 +308,11 @@ async def ocr_paddle_upload(
         usar_modelo_local=usar_modelo_local,
     )
     return {
-        "sucesso": resultado["formato_crlv_valido"],
-        "modo": "leitura_documentos_paddleocr",
+        "sucesso": bool(resultado.get("formato_crlv_valido", False)),
+        "validador": "paddleocr",
         "arquivo": file.filename,
-        "analise": resultado,
+        "placa": resultado.get("placa"),
+        "payload": resultado,
     }
 
 
@@ -349,10 +350,18 @@ def ocr_paddle_json(req: OcrPaddleRequest):
             detail="Informe caminho_arquivo, imagem_base64 ou arquivo_base64.",
         )
 
+    nome_arquivo = (
+        Path(req.caminho_arquivo).name
+        if req.caminho_arquivo
+        else ("base64_upload.png" if (req.imagem_base64 or req.arquivo_base64) else None)
+    )
+
     return {
-        "sucesso": resultado["formato_crlv_valido"],
-        "modo": "leitura_documentos_paddleocr",
-        "analise": resultado,
+        "sucesso": bool(resultado.get("formato_crlv_valido", False)),
+        "validador": "paddleocr",
+        "arquivo": nome_arquivo,
+        "placa": resultado.get("placa"),
+        "payload": resultado,
     }
 
 

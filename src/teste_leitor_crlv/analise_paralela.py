@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from .analise_local import validar_local_com_checker
 from .analise_ocr import analisar_crlv_com_posicao
 from .analise_paddleocr import analisar_crlv_com_paddleocr
-from .qrcode_utils import extrair_bytes_qrcode
+from .qrcode_utils import extrair_bytes_qrcode, extrair_placa_de_dicionario
 
 logger = logging.getLogger(__name__)
 
@@ -188,14 +188,19 @@ def orquestrar_corrida_paralela(
         paddle_em_background = False
         if vencedor != "paddleocr" and garantir_treino_paddle:
             paddle_em_background = True
-            # O future do Paddle já está em execução no ThreadPoolExecutor e salvará a amostra ao terminar
 
-        return {
-            "sucesso": True,
-            "vencedor_corrida": vencedor,
+        placa = extrair_placa_de_dicionario(primeiro_sucesso["dados"])
+        payload = {
             "tempo_resposta_ms": tempo_total,
             "paddle_coletando_em_background": paddle_em_background,
-            "resultado": primeiro_sucesso["dados"],
+            "dados": primeiro_sucesso["dados"],
+        }
+        return {
+            "sucesso": True,
+            "validador": vencedor,
+            "arquivo": nome_arquivo or None,
+            "placa": placa,
+            "payload": payload,
         }
 
     # Se nenhum venceu de imediato, aguarda os restantes concluírem
@@ -207,14 +212,20 @@ def orquestrar_corrida_paralela(
                 resultados_concluidos[nome] = {"sucesso": False, "erro": str(exc)}
 
     tempo_total = round((time.perf_counter() - t_inicio) * 1000, 2)
-    return {
-        "sucesso": False,
+    payload_falha = {
         "mensagem": "Nenhum analisador obteve sucesso na leitura do documento.",
         "tempo_total_ms": tempo_total,
         "tentativas": {
-            k: {"sucesso": v.get("sucesso", False), "tempo_ms": v.get("tempo_ms")}
+            k: {"sucesso": v.get("sucesso", False), "tempo_ms": v.get("tempo_ms"), "erro": v.get("erro")}
             for k, v in resultados_concluidos.items()
         },
+    }
+    return {
+        "sucesso": False,
+        "validador": "nenhum",
+        "arquivo": nome_arquivo or None,
+        "placa": None,
+        "payload": payload_falha,
     }
 
 

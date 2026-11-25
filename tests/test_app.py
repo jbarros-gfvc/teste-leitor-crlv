@@ -78,9 +78,10 @@ class TestVioAndLocalChecker(unittest.TestCase):
         )
         res = consultar_json(req)
         self.assertTrue(res["sucesso"])
-        self.assertEqual(res["bytes_extraidos_total"], 5)
-        self.assertEqual(res["dados_vio"]["id"], "cnh_123")
-        self.assertIn("qrcode_reconstituido_base64", res)
+        self.assertEqual(res["validador"], "integrador-vio")
+        self.assertEqual(res["payload"]["bytes_extraidos_total"], 5)
+        self.assertEqual(res["payload"]["dados_vio"]["id"], "cnh_123")
+        self.assertIn("qrcode_reconstituido_base64", res["payload"])
 
     @patch("teste_leitor_crlv.analise_local.DigitalDocumentChecker")
     def test_validar_localmente_json(self, mock_checker_cls):
@@ -107,10 +108,9 @@ class TestVioAndLocalChecker(unittest.TestCase):
         )
         res = validar_localmente_json(req)
         self.assertTrue(res["sucesso"])
-        self.assertEqual(res["validador"], "digital-document-checker (local/offline)")
-        self.assertIn("qrcode_extraido_base64", res)
-        self.assertEqual(res["resultado"]["document_type"], "cnh")
-        self.assertTrue(res["resultado"]["status"]["is_authentic"])
+        self.assertEqual(res["validador"], "digital-document-checker")
+        self.assertEqual(res["payload"]["document_type"], "cnh")
+        self.assertTrue(res["payload"]["status"]["is_authentic"])
 
     def test_dentro_da_area(self):
         limites = (0.1, 0.1, 0.3, 0.3)
@@ -174,9 +174,9 @@ class TestVioAndLocalChecker(unittest.TestCase):
         res = ocr_crlv_json(req)
 
         self.assertTrue(res["sucesso"])
-        self.assertEqual(res["modo"], "leitura_documentos_ocr")
-        self.assertEqual(res["analise"]["placa"], "BRA2E19")
-        self.assertEqual(res["analise"]["renavam"], "12345678901")
+        self.assertEqual(res["validador"], "easyocr")
+        self.assertEqual(res["placa"], "BRA2E19")
+        self.assertEqual(res["payload"]["renavam"], "12345678901")
 
     def test_paddleocr_mock_reader(self):
         mock_reader = MagicMock()
@@ -247,10 +247,10 @@ class TestVioAndLocalChecker(unittest.TestCase):
         res = ocr_paddle_json(req)
 
         self.assertTrue(res["sucesso"])
-        self.assertEqual(res["modo"], "leitura_documentos_paddleocr")
-        self.assertEqual(res["analise"]["placa"], "BWY2C88")
-        self.assertEqual(res["analise"]["renavam"], "00381050920")
-        self.assertIn("enquadramento", res["analise"])
+        self.assertEqual(res["validador"], "paddleocr")
+        self.assertEqual(res["placa"], "BWY2C88")
+        self.assertEqual(res["payload"]["renavam"], "00381050920")
+        self.assertIn("enquadramento", res["payload"])
 
     def test_enquadramento_sem_qr(self):
         img_np = np.ones((600, 800, 3), dtype=np.uint8) * 255
@@ -299,26 +299,30 @@ class TestVioAndLocalChecker(unittest.TestCase):
         )
 
         self.assertTrue(res["sucesso"])
-        self.assertEqual(res["vencedor_corrida"], "digital_document_checker")
-        self.assertTrue(res["paddle_coletando_em_background"])
-        self.assertEqual(res["resultado"]["document"]["numero_espelho"], "123")
+        self.assertEqual(res["validador"], "digital_document_checker")
+        self.assertTrue(res["payload"]["paddle_coletando_em_background"])
+        self.assertEqual(res["payload"]["dados"]["document"]["numero_espelho"], "123")
 
     @patch("teste_leitor_crlv.analise_paralela.orquestrar_corrida_paralela")
     def test_endpoint_analisar_rapido_json(self, mock_orquestrador):
         mock_orquestrador.return_value = {
             "sucesso": True,
-            "vencedor_corrida": "paddleocr",
-            "tempo_resposta_ms": 180.2,
-            "paddle_coletando_em_background": False,
-            "resultado": {"placa": "ABC1D23", "renavam": "12345678901"},
+            "validador": "paddleocr",
+            "arquivo": "base64_upload.png",
+            "placa": "ABC1D23",
+            "payload": {
+                "tempo_resposta_ms": 180.2,
+                "paddle_coletando_em_background": False,
+                "dados": {"placa": "ABC1D23", "renavam": "12345678901"},
+            },
         }
         b64 = base64.b64encode(b"dummy_image").decode("ascii")
         req = AnaliseRapidaRequest(imagem_base64=b64, garantir_treino_paddle=True)
         res = analisar_rapido_json(req)
 
         self.assertTrue(res["sucesso"])
-        self.assertEqual(res["vencedor_corrida"], "paddleocr")
-        self.assertEqual(res["resultado"]["placa"], "ABC1D23")
+        self.assertEqual(res["validador"], "paddleocr")
+        self.assertEqual(res["placa"], "ABC1D23")
 
 
 if __name__ == "__main__":

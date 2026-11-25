@@ -15,7 +15,7 @@ from vio_api import (
     VioUnauthorizedError,
 )
 
-from .qrcode_utils import extrair_bytes_qrcode, gerar_qrcode_base64
+from .qrcode_utils import extrair_bytes_qrcode, extrair_placa_de_dicionario, gerar_qrcode_base64
 
 router = APIRouter(tags=["Remoto (API VIO Serpro)"])
 
@@ -70,16 +70,22 @@ async def consultar_imagem_upload(
     dados_binarios = extrair_bytes_qrcode(conteudo_arquivo)
     b64_qr = gerar_qrcode_base64(dados_binarios)
     resultado_vio = consultar_vio_com_base64(b64_qr, wait=wait)
+    placa = extrair_placa_de_dicionario(resultado_vio)
 
-    resp = {
-        "sucesso": True,
-        "arquivo": file.filename,
-        "bytes_extraidos_total": len(dados_binarios),
+    payload = {
         "dados_vio": resultado_vio,
+        "bytes_extraidos_total": len(dados_binarios),
     }
     if incluir_qrcode_base64:
-        resp["qrcode_reconstituido_base64"] = b64_qr
-    return resp
+        payload["qrcode_reconstituido_base64"] = b64_qr
+
+    return {
+        "sucesso": True,
+        "validador": "integrador-vio",
+        "arquivo": file.filename,
+        "placa": placa,
+        "payload": payload,
+    }
 
 
 @router.post("/api/consultar")
@@ -106,14 +112,20 @@ def consultar_json(req: ConsultaVioRequest):
     elif req.texto:
         b64_qr = gerar_qrcode_base64(req.texto)
         resultado_vio = consultar_vio_com_base64(b64_qr, wait=req.wait)
-        resp = {
-            "sucesso": True,
+        placa = extrair_placa_de_dicionario(resultado_vio)
+        payload = {
             "origem": "texto",
             "dados_vio": resultado_vio,
         }
         if req.incluir_qrcode_base64:
-            resp["qrcode_reconstituido_base64"] = b64_qr
-        return resp
+            payload["qrcode_reconstituido_base64"] = b64_qr
+        return {
+            "sucesso": True,
+            "validador": "integrador-vio",
+            "arquivo": None,
+            "placa": placa,
+            "payload": payload,
+        }
 
     else:
         raise HTTPException(
@@ -123,12 +135,20 @@ def consultar_json(req: ConsultaVioRequest):
 
     b64_qr = gerar_qrcode_base64(dados_binarios)
     resultado_vio = consultar_vio_com_base64(b64_qr, wait=req.wait)
+    placa = extrair_placa_de_dicionario(resultado_vio)
+    nome_arquivo = Path(req.caminho_imagem).name if req.caminho_imagem else "base64_upload.png"
 
-    resp = {
-        "sucesso": True,
-        "bytes_extraidos_total": len(dados_binarios),
+    payload = {
         "dados_vio": resultado_vio,
+        "bytes_extraidos_total": len(dados_binarios),
     }
     if req.incluir_qrcode_base64:
-        resp["qrcode_reconstituido_base64"] = b64_qr
-    return resp
+        payload["qrcode_reconstituido_base64"] = b64_qr
+
+    return {
+        "sucesso": True,
+        "validador": "integrador-vio",
+        "arquivo": nome_arquivo,
+        "placa": placa,
+        "payload": payload,
+    }

@@ -298,10 +298,11 @@ async def ocr_crlv_upload(
         nome_arquivo=file.filename or "",
     )
     return {
-        "sucesso": resultado["formato_crlv_valido"],
-        "modo": "leitura_documentos_ocr",
+        "sucesso": bool(resultado.get("formato_crlv_valido", False)),
+        "validador": "easyocr",
         "arquivo": file.filename,
-        "analise": resultado,
+        "placa": resultado.get("placa"),
+        "payload": resultado,
     }
 
 
@@ -335,8 +336,16 @@ def ocr_crlv_json(req: OcrCrlvRequest):
             detail="Informe caminho_arquivo, imagem_base64 ou arquivo_base64.",
         )
 
+    nome_arquivo = (
+        Path(req.caminho_arquivo).name
+        if req.caminho_arquivo
+        else ("base64_upload.png" if (req.imagem_base64 or req.arquivo_base64) else None)
+    )
+
     return {
-        "sucesso": resultado["formato_crlv_valido"],
-        "modo": "leitura_documentos_ocr",
-        "analise": resultado,
+        "sucesso": bool(resultado.get("formato_crlv_valido", False)),
+        "validador": "easyocr",
+        "arquivo": nome_arquivo,
+        "placa": resultado.get("placa"),
+        "payload": resultado,
     }

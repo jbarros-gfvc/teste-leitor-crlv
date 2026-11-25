@@ -33,6 +33,28 @@ graph TD
 - **Documentação Interativa**: Swagger UI em `http://localhost:8000/docs` e OpenAPI JSON em `http://localhost:8000/openapi.json`.
 - **Coleção de Testes Pronta**: [insomnia_collection.json](file:///C:/Users/user/Documents/teste-leitor-crlv/insomnia_collection.json) contém requisições configuradas para todos os analisadores.
 
+### Contrato Padronizado de Resposta (Todos os Endpoints)
+
+Todos os endpoints da API seguem rigorosamente a mesma assinatura raiz para facilitar a integração cliente:
+
+```json
+{
+  "sucesso": true,
+  "validador": "digital-document-checker",
+  "arquivo": "documento.jpg",
+  "placa": "ABC1D23",
+  "payload": {
+    ...
+  }
+}
+```
+
+- `sucesso` (`bool`): Indica se o documento foi autenticado/lido com sucesso.
+- `validador` (`str`): Nome do analisador que processou a requisição (`digital-document-checker`, `integrador-vio`, `easyocr`, `paddleocr`).
+- `arquivo` (`str | None`): Nome do arquivo enviado ou processado.
+- `placa` (`str | None`): Placa do veículo extraída e normalizada em maiúsculas (padrão Mercosul ou antigo).
+- `payload` (`dict`): Objeto específico com todos os detalhes e metadados retornados pelo motor validador.
+
 ---
 
 ## 2. Analisadores por Tipo e Responsabilidade

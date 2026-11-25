@@ -7,7 +7,7 @@ from digital_document_checker import DigitalDocumentChecker
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
-from .qrcode_utils import extrair_bytes_qrcode
+from .qrcode_utils import extrair_bytes_qrcode, extrair_placa_de_dicionario
 
 router = APIRouter(tags=["Local / Offline (Digital Document Checker)"])
 
@@ -51,14 +51,15 @@ async def validar_localmente_upload(
     dados_binarios = extrair_bytes_qrcode(conteudo_arquivo)
     b64_qr = base64.b64encode(dados_binarios).decode("ascii")
     resultado_dict = validar_local_com_checker(b64_qr, include_raw=include_raw)
+    sucesso = bool(resultado_dict.get("status", {}).get("is_parsed", False))
+    placa = extrair_placa_de_dicionario(resultado_dict)
 
     return {
-        "sucesso": resultado_dict["status"]["is_parsed"],
-        "validador": "digital-document-checker (local/offline)",
+        "sucesso": sucesso,
+        "validador": "digital-document-checker",
         "arquivo": file.filename,
-        "bytes_extraidos_total": len(dados_binarios),
-        "qrcode_extraido_base64": b64_qr,
-        "resultado": resultado_dict,
+        "placa": placa,
+        "payload": resultado_dict,
     }
 
 
@@ -66,14 +67,9 @@ async def validar_localmente_upload(
 def validar_localmente_json(req: ValidacaoLocalRequest):
     """Recebe imagem ou QR Code em Base64 e valida autenticidade/assinatura localmente."""
     b64_qr: str | None = None
-    bytes_extraidos_total: int = 0
 
     if req.qrcode_base64:
         b64_qr = req.qrcode_base64
-        try:
-            bytes_extraidos_total = len(base64.b64decode(b64_qr))
-        except (binascii.Error, ValueError):
-            bytes_extraidos_total = len(b64_qr)
 
     elif req.imagem_base64:
         b64 = req.imagem_base64
@@ -84,7 +80,6 @@ def validar_localmente_json(req: ValidacaoLocalRequest):
         except (binascii.Error, ValueError) as exc:
             raise HTTPException(status_code=400, detail=f"Base64 da imagem inválido: {exc}") from exc
         dados_binarios = extrair_bytes_qrcode(raw_img)
-        bytes_extraidos_total = len(dados_binarios)
         b64_qr = base64.b64encode(dados_binarios).decode("ascii")
 
     elif req.caminho_imagem:
@@ -92,7 +87,6 @@ def validar_localmente_json(req: ValidacaoLocalRequest):
         if not path.is_file():
             raise HTTPException(status_code=404, detail=f"Arquivo não encontrado: {path}")
         dados_binarios = extrair_bytes_qrcode(path.read_bytes())
-        bytes_extraidos_total = len(dados_binarios)
         b64_qr = base64.b64encode(dados_binarios).decode("ascii")
 
     else:
@@ -102,11 +96,16 @@ def validar_localmente_json(req: ValidacaoLocalRequest):
         )
 
     resultado_dict = validar_local_com_checker(b64_qr, include_raw=req.include_raw)
+    sucesso = bool(resultado_dict.get("status", {}).get("is_parsed", False))
+    placa = extrair_placa_de_dicionario(resultado_dict)
+    nome_arquivo = (
+        Path(req.caminho_imagem).name if req.caminho_imagem else ("base64_upload.png" if req.imagem_base64 else None)
+    )
 
     return {
-        "sucesso": resultado_dict["status"]["is_parsed"],
-        "validador": "digital-document-checker (local/offline)",
-        "bytes_extraidos_total": bytes_extraidos_total,
-        "qrcode_extraido_base64": b64_qr,
-        "resultado": resultado_dict,
+        "sucesso": sucesso,
+        "validador": "digital-document-checker",
+        "arquivo": nome_arquivo,
+        "placa": placa,
+        "payload": resultado_dict,
     }

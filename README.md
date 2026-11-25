@@ -22,6 +22,18 @@ uv run uvicorn teste_leitor_crlv.app:app --reload --port 8000
 
 Swagger UI interativo: `http://localhost:8000/docs`
 
+### Contrato Padronizado de Resposta (JSON)
+Todos os endpoints retornam a mesma estrutura raiz:
+```json
+{
+  "sucesso": true,
+  "validador": "digital-document-checker",
+  "arquivo": "crlv.jpg",
+  "placa": "ABC1D23",
+  "payload": { ... }
+}
+```
+
 ---
 
 ## 2. Endpoints Análise Rápida Paralela (Novo)
