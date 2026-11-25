@@ -137,16 +137,45 @@ def orquestrar_corrida_paralela(
     garantir_treino_paddle: bool = True,
     background_tasks: BackgroundTasks | None = None,
 ) -> dict[str, Any]:
-    """Dispara os 3 analisadores simultaneamente e retorna o primeiro com sucesso.
+    """Orquestra corrida inteligente: Fast-Path com DigitalDocumentChecker (<50ms).
 
-    Se garantir_treino_paddle for True e PaddleOCR não vencer a corrida, o PaddleOCR
-    continua executando em background para registrar eventuais falhas para retreino.
+    Se o QR Code for autêntico, encerra de imediato economizando CPU.
+    Caso contrário, aciona OCRs em paralelo com prioridade para PaddleOCR.
     """
     t_inicio = time.perf_counter()
 
-    # Dispara os 3 analisadores em paralelo
-    fut_checker = _executor.submit(_executar_digital_checker, imagem_bytes)
-    fut_easy = _executor.submit(_executar_easyocr, imagem_bytes, margem_erro)
+    # 1. Fast-Path Ultrarrápido: Checa assinatura criptográfica do QR Code primeiro (~30-50ms)
+    res_checker = _executar_digital_checker(imagem_bytes)
+    if res_checker.get("sucesso") is True:
+        tempo_total = round((time.perf_counter() - t_inicio) * 1000, 2)
+        paddle_em_background = False
+
+        # Se solicitado, submete o PaddleOCR de forma assíncrona para registrar amostras de treino
+        if garantir_treino_paddle:
+            _executor.submit(
+                _executar_paddleocr,
+                imagem_bytes,
+                margem_erro,
+                nome_arquivo,
+                True,
+            )
+            paddle_em_background = True
+
+        placa = extrair_placa_de_dicionario(res_checker["dados"])
+        return {
+            "sucesso": True,
+            "validador": "digital_document_checker",
+            "arquivo": nome_arquivo or None,
+            "placa": placa,
+            "payload": {
+                "fast_path": True,
+                "tempo_resposta_ms": tempo_total,
+                "paddle_coletando_em_background": paddle_em_background,
+                "dados": res_checker["dados"],
+            },
+        }
+
+    # 2. Se o QR Code falhou ou não existe, dispara OCRs em paralelo
     fut_paddle = _executor.submit(
         _executar_paddleocr,
         imagem_bytes,
@@ -154,15 +183,15 @@ def orquestrar_corrida_paralela(
         nome_arquivo,
         garantir_treino_paddle,
     )
+    fut_easy = _executor.submit(_executar_easyocr, imagem_bytes, margem_erro)
 
     mapeamento_futuros = {
-        fut_checker: "digital_document_checker",
-        fut_easy: "easyocr",
         fut_paddle: "paddleocr",
+        fut_easy: "easyocr",
     }
 
     primeiro_sucesso: dict[str, Any] | None = None
-    resultados_concluidos: dict[str, Any] = {}
+    resultados_concluidos: dict[str, Any] = {"digital_document_checker": res_checker}
 
     for fut in concurrent.futures.as_completed(mapeamento_futuros):
         nome_analisador = mapeamento_futuros[fut]
@@ -171,26 +200,22 @@ def orquestrar_corrida_paralela(
             resultados_concluidos[nome_analisador] = res
             if res.get("sucesso") is True and primeiro_sucesso is None:
                 primeiro_sucesso = res
-                # Se Paddle já venceu ou treino não é necessário, encerra a espera
-                if nome_analisador == "paddleocr" or not garantir_treino_paddle:
-                    break
-                # Se outro venceu mas queremos garantir que o Paddle termine para retreino:
                 break
         except Exception as exc:  # noqa: BLE001
             resultados_concluidos[nome_analisador] = {"sucesso": False, "erro": str(exc)}
 
-    # Se obtivemos sucesso imediato:
+    # Se obtivemos sucesso imediato no OCR:
     if primeiro_sucesso is not None:
         tempo_total = round((time.perf_counter() - t_inicio) * 1000, 2)
         vencedor = primeiro_sucesso["analisador"]
 
-        # Se o vencedor não foi o Paddle, asseguramos que o Paddle conclua em background
         paddle_em_background = False
         if vencedor != "paddleocr" and garantir_treino_paddle:
             paddle_em_background = True
 
         placa = extrair_placa_de_dicionario(primeiro_sucesso["dados"])
         payload = {
+            "fast_path": False,
             "tempo_resposta_ms": tempo_total,
             "paddle_coletando_em_background": paddle_em_background,
             "dados": primeiro_sucesso["dados"],
@@ -203,7 +228,7 @@ def orquestrar_corrida_paralela(
             "payload": payload,
         }
 
-    # Se nenhum venceu de imediato, aguarda os restantes concluírem
+    # Se nenhum venceu, aguarda o outro concluir
     for fut, nome in mapeamento_futuros.items():
         if nome not in resultados_concluidos:
             try:

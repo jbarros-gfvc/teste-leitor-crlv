@@ -1,3 +1,8 @@
+import logging
+import threading
+from contextlib import asynccontextmanager
+
+import numpy as np
 import uvicorn
 from fastapi import FastAPI
 
@@ -6,6 +11,9 @@ from .analise_local import (
 )
 from .analise_ocr import (
     router as ocr_router,
+)
+from .analise_paddleocr import (
+    obter_reader_paddle,
 )
 from .analise_paddleocr import (
     router as paddle_router,
@@ -17,10 +25,31 @@ from .analise_vio import (
     router as vio_router,
 )
 
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Pré-aquece os modelos de inferência ONNX em background thread para eliminar cold-start."""
+
+    def _warmup():
+        try:
+            reader = obter_reader_paddle()
+            dummy_img = np.zeros((100, 100, 3), dtype=np.uint8)
+            reader.predict(dummy_img)
+            logger.info("Warm-up concluído com sucesso.")
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Warm-up silencioso: %s", exc)
+
+    threading.Thread(target=_warmup, daemon=True, name="model_warmup").start()
+    yield
+
+
 app = FastAPI(
     title="API Leitor CRLV (Digital Document Checker, EasyOCR, PaddleOCR & VIO)",
     description="Validação via API Serpro VIO, Digital Document Checker (offline), EasyOCR, PaddleOCR e corrida multithread de alta velocidade",
-    version="0.7.0",
+    version="0.8.0",
+    lifespan=lifespan,
 )
 
 # Registra os módulos de análise por responsabilidade

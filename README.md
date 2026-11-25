@@ -36,9 +36,9 @@ Todos os endpoints retornam a mesma estrutura raiz:
 
 ---
 
-## 2. Endpoints Análise Rápida Paralela (Novo)
+## 2. Endpoints Análise Rápida Paralela (Fast-Path & Multithread)
 
-Executa DigitalDocumentChecker, EasyOCR e PaddleOCR em paralelo. Retorna o primeiro vencedor e mantém o PaddleOCR rodando em background para alimentar a base de retreino:
+Executa Fast-Path via DigitalDocumentChecker (<50ms). Se o QR Code for ausente ou rasurado, dispara PaddleOCR e EasyOCR em paralelo com downscale inteligente (1600px) e warm-up no startup da API:
 
 - **POST** `/api/analisar-rapido-imagem` (Multipart Form)
 - **POST** `/api/analisar-rapido` (JSON)
