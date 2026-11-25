@@ -20,6 +20,7 @@ from .analise_ocr import (
     delimitar_documento_pelos_textos,
     dentro_da_area,
 )
+from .enquadramento import otimizar_enquadramento_crlv
 from .reconhecedor_local import ReconhecedorCRNNLocal, obter_reconhecedor_local
 
 router = APIRouter(tags=["Leitura OCR com PaddleOCR (CRLV)"])
@@ -158,11 +159,17 @@ def analisar_crlv_com_paddleocr(
     reader=None,
     salvar_amostra: bool = False,
     usar_modelo_local: bool = True,
+    otimizar_enquadramento: bool = True,
 ) -> dict:
     if isinstance(origem, np.ndarray):
         imagem = origem
     else:
         imagem = carregar_imagem(origem, nome_arquivo=nome_arquivo)
+
+    meta_enquadramento = None
+    if otimizar_enquadramento:
+        imagem, meta = otimizar_enquadramento_crlv(imagem)
+        meta_enquadramento = meta.to_dict()
 
     if reader is None:
         reader = obter_reader_paddle()
@@ -260,6 +267,7 @@ def analisar_crlv_com_paddleocr(
         "ancoras_na_posicao": ancoras_validadas,
         "total_ancoras_ok": f"{total_validadas}/6",
         "renavam": renavam_match.group(0) if renavam_match else None,
+        "enquadramento": meta_enquadramento,
         "area_documento_detectada": {
             "x_min": int(doc_x_min),
             "y_min": int(doc_y_min),

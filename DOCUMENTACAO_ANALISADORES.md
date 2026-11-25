@@ -22,6 +22,7 @@ graph TD
 ```
 
 - **Entrypoint**: [app.py](file:///C:/Users/user/Documents/teste-leitor-crlv/src/teste_leitor_crlv/app.py) inicializa a aplicação FastAPI e registra os 4 roteadores (`APIRouter`).
+- **Enquadramento e Alinhamento**: [enquadramento.py](file:///C:/Users/user/Documents/teste-leitor-crlv/src/teste_leitor_crlv/enquadramento.py) recorta a área útil do cartão antes do OCR através de âncoras geométricas (QR Code à direita, texto Vio e faixa superior escura).
 - **Utilitário Compartilhado**: [qrcode_utils.py](file:///C:/Users/user/Documents/teste-leitor-crlv/src/teste_leitor_crlv/qrcode_utils.py) provê `extrair_bytes_qrcode` (`zxing-cpp`) e `gerar_qrcode_base64` (`segno`).
 - **Endpoint Raiz de Descoberta**: `GET http://localhost:8000/` retorna o status e catálogo de todos os modos disponíveis.
 - **Documentação Interativa**: Swagger UI em `http://localhost:8000/docs` e OpenAPI JSON em `http://localhost:8000/openapi.json`.
@@ -91,6 +92,28 @@ graph TD
   - `POST /api/paddleocr-crlv-imagem` (`multipart/form-data`: `file`, `margem_erro`, `salvar_amostra`, `usar_modelo_local`)
   - `POST /api/paddleocr-crlv` (JSON: `caminho_arquivo`, `imagem_base64`, `margem_erro`, `usar_modelo_local`)
   - `POST /api/paddleocr-feedback` (JSON: `id_amostra`, `placa_correta`, `renavam_correto`, `observacoes`)
+
+---
+
+### Módulo de Enquadramento Inteligente (`enquadramento.py`)
+
+- **Arquivo**: [src/teste_leitor_crlv/enquadramento.py](file:///C:/Users/user/Documents/teste-leitor-crlv/src/teste_leitor_crlv/enquadramento.py)
+- **Objetivo**: Reduzir em até 60% a área de imagem processada pelos modelos OCR cortando mesas, dedos e fundos, e aplicando deskew automático (0°, 90°, 180°, 270°).
+- **Âncoras Utilizadas**:
+  1. **QR Code VIO (Direita)**: `zxing-cpp` detecta os cantos e o ângulo exato do QR Code. Como os dados do veículo ficam sempre à esquerda e a faixa escura acima, o módulo calcula a ROI exata do cartão com margem de segurança.
+  2. **Faixa Superior Escura / Brasão**: Alinha o topo e o limite esquerdo do cabeçalho (*REPÚBLICA FEDERATIVA DO BRASIL*).
+  3. **Contorno de Documento**: Caso o QR Code esteja ausente ou rasurado, o detector de bordas Canny com aproximação poligonal localiza o retângulo do papel.
+- **Saída nos JSONs da API**:
+  ```json
+  "enquadramento": {
+    "metodo": "qrcode_vio",
+    "rotacao_graus": 90,
+    "crop_aplicado": true,
+    "dimensoes_originais": {"largura": 720, "altura": 1280},
+    "dimensoes_finais": {"largura": 981, "altura": 685},
+    "qrcode_detectado": true
+  }
+  ```
 
 ---
 

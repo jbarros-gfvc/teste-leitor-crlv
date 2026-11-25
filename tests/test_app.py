@@ -28,6 +28,10 @@ from teste_leitor_crlv.analise_vio import (
     ConsultaVioRequest,
     consultar_json,
 )
+from teste_leitor_crlv.enquadramento import (
+    MetadadosEnquadramento,
+    otimizar_enquadramento_crlv,
+)
 from teste_leitor_crlv.qrcode_utils import (
     extrair_bytes_qrcode,
     gerar_qrcode_base64,
@@ -241,6 +245,33 @@ class TestVioAndLocalChecker(unittest.TestCase):
         self.assertEqual(res["modo"], "leitura_documentos_paddleocr")
         self.assertEqual(res["analise"]["placa"], "BWY2C88")
         self.assertEqual(res["analise"]["renavam"], "00381050920")
+        self.assertIn("enquadramento", res["analise"])
+
+    def test_enquadramento_sem_qr(self):
+        img_np = np.ones((600, 800, 3), dtype=np.uint8) * 255
+        crop_rgb, meta = otimizar_enquadramento_crlv(img_np)
+        self.assertIsInstance(meta, MetadadosEnquadramento)
+        self.assertEqual(meta.dimensoes_originais, (800, 600))
+        self.assertEqual(crop_rgb.shape, (600, 800, 3))
+
+    def test_enquadramento_com_qr(self):
+        # Cria imagem com QR Code posicionado a direita
+        qr = segno.make(b"0123456789ABCDEF")
+        buf = io.BytesIO()
+        qr.save(buf, kind="png", scale=4)
+        qr_pil = Image.open(buf).convert("RGB")
+
+        # Imagem grande 1200x800 com QR Code no canto direito
+        base_img = Image.new("RGB", (1200, 800), color="white")
+        base_img.paste(qr_pil, (800, 300))
+        img_np = np.array(base_img)
+
+        crop_rgb, meta = otimizar_enquadramento_crlv(img_np)
+        self.assertTrue(meta.crop_aplicado)
+        self.assertEqual(meta.metodo, "qrcode_vio")
+        self.assertTrue(meta.qrcode_info["bytes_length"] > 0)
+        self.assertLessEqual(crop_rgb.shape[1], 1200)
+        self.assertLessEqual(crop_rgb.shape[0], 800)
 
 
 if __name__ == "__main__":

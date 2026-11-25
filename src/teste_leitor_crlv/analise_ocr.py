@@ -17,6 +17,8 @@ except ImportError:
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
+from .enquadramento import otimizar_enquadramento_crlv
+
 router = APIRouter(tags=["Leitura OCR de Documentos (CRLV)"])
 
 _ocr_reader: easyocr.Reader | None = None
@@ -159,11 +161,20 @@ def analisar_crlv_com_posicao(
     nome_arquivo: str = "",
     reader: easyocr.Reader | None = None,
     auto_orientar: bool = True,
+    otimizar_enquadramento: bool = True,
 ) -> dict:
     if isinstance(origem, np.ndarray):
         imagem = origem
     else:
         imagem = carregar_imagem(origem, nome_arquivo=nome_arquivo)
+
+    meta_enquadramento = None
+    if otimizar_enquadramento:
+        imagem, meta = otimizar_enquadramento_crlv(imagem)
+        meta_enquadramento = meta.to_dict()
+        # Se o enquadramento orientou a imagem pelo QR Code, dispensa busca exaustiva
+        if meta.rotacao_graus != 0 or meta.metodo == "qrcode_vio":
+            auto_orientar = False
 
     if reader is None:
         reader = obter_reader_ocr()
@@ -257,6 +268,7 @@ def analisar_crlv_com_posicao(
         "ancoras_na_posicao": ancoras_validadas,
         "total_ancoras_ok": f"{total_validadas}/6",
         "renavam": renavam_match.group(0) if renavam_match else None,
+        "enquadramento": meta_enquadramento,
         "area_documento_detectada": {
             "x_min": int(doc_x_min),
             "y_min": int(doc_y_min),
