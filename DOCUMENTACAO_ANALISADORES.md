@@ -185,6 +185,24 @@ O sistema detecta dinamicamente a presença de aceleradores sem quebrar caso exe
   3. `CPUExecutionProvider` (Fallback automático universal).
 - O endpoint raiz `GET /` expõe o bloco `aceleradores` detalhando os provedores ativos em tempo de execução.
 
+#### Instalação das Dependências de GPU (Extras)
+
+As bibliotecas de aceleração gráfica podem ser instaladas via extras configurados no `pyproject.toml`:
+
+```bash
+# AMD / Intel (Windows DirectML - PaddleOCR e CRNN Local):
+uv sync --extra gpu-amd
+# ou via pip:
+pip install ".[gpu-amd]"
+
+# NVIDIA CUDA (PaddleOCR, CRNN Local e EasyOCR):
+uv sync --extra gpu-nvidia
+# ou via pip:
+pip install ".[gpu-nvidia]"
+# Caso utilize PyTorch com CUDA para EasyOCR:
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+```
+
 ---
 
 ## 4. Guia Completo: Retroalimentação, Feedback e Treinamento

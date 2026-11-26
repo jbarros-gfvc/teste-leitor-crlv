@@ -26,6 +26,14 @@ dependencies = [
     "zxing-cpp>=3.1.1",
 ]
 
+[project.optional-dependencies]
+gpu-amd = [
+    "onnxruntime-directml>=1.20.0; sys_platform == 'win32'",
+]
+gpu-nvidia = [
+    "onnxruntime-gpu>=1.20.0",
+]
+
 [project.scripts]
 teste-leitor-crlv = "teste_leitor_crlv:main"
 

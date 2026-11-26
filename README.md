@@ -21,6 +21,21 @@ uv run teste-leitor-crlv
 uv run uvicorn teste_leitor_crlv.app:app --reload --port 8000
 ```
 
+### Aceleração por GPU (Opcional)
+
+Para habilitar aceleração por hardware nos motores OCR e ONNX Runtime:
+
+- **GPU AMD / Intel (Windows via DirectML - PaddleOCR e CRNN Local)**:
+  ```bash
+  uv sync --extra gpu-amd
+  ```
+- **GPU NVIDIA (CUDA - PaddleOCR, CRNN Local e EasyOCR)**:
+  ```bash
+  uv sync --extra gpu-nvidia
+  # Para EasyOCR com PyTorch CUDA no Windows/Linux:
+  uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+  ```
+
 Swagger UI interativo: `http://localhost:8000/docs`
 
 ### Contrato Padronizado de Resposta (JSON)
