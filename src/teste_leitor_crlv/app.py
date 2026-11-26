@@ -24,6 +24,7 @@ from .analise_paralela import (
 from .analise_vio import (
     router as vio_router,
 )
+from .dispositivo import obter_info_aceleradores
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,7 @@ app.include_router(paralelo_router)
 def raiz():
     return {
         "status": "online",
+        "aceleradores": obter_info_aceleradores(),
         "modos": {
             "analise_rapida_paralela": {
                 "upload": "POST /api/analisar-rapido-imagem (multipart/form-data)",

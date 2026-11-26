@@ -9,6 +9,7 @@ API FastAPI com suporte a quatro métodos de validação e leitura de documentos
 3. **Leitura de Documentos via EasyOCR**: Análise geométrica de âncoras (República Federativa, Certificado, RENAVAM, Placa, Exercício, CRV), correção de rotação/EXIF, extração de Placa e validação de RENAVAM.
 4. **Leitura de Documentos via PaddleOCR (ONNX/PP-OCRv6)**: Reconhecimento rápido e preciso com suporte nativo a treinamento e fine-tuning.
 5. **Enquadramento Inteligente com Âncoras**: Recorte automático da área útil do documento guiado pela posição do QR Code à direita (e texto Vio) e faixa escura superior (brasão), eliminando mesas/fundos e corrigindo rotações de 90°/180°/270° instantaneamente.
+6. **Auto-Detecção de Aceleração por GPU**: Ativação transparente de GPU (CUDA / DirectML) se disponível no ambiente com fallback automático para CPU.
 
 ---
 

@@ -169,7 +169,21 @@ Todos os endpoints da API seguem rigorosamente a mesma assinatura raiz para faci
 | **Entrada Principal** | QR Code VIO | QR Code VIO/Gov | Texto/Foto CRLV | Texto/Foto CRLV |
 | **Suporte a PDF e Fotos** | Apenas QR Code | Apenas QR Code | PDF e Fotos | PDF e Fotos |
 | **Tolerância a Ângulo** | Média | Média | Alta (cv2 rotate) | Muito Alta (PP-LCNet) |
+| **Aceleração por GPU** | N/A (Remoto) | N/A (CPU leve) | Sim (CUDA / PyTorch) | Sim (CUDA / DirectML) |
 | **Treinabilidade Local** | Impossível | Chaves Criptográficas | Complexa | Nativa (CRNN/ONNX) |
+
+---
+
+### Aceleração por Hardware e Detecção de GPU
+
+O sistema detecta dinamicamente a presença de aceleradores sem quebrar caso executado apenas em CPU:
+
+- **EasyOCR**: se `torch.cuda.is_available() == True`, inicializa o leitor com `gpu=True`.
+- **PaddleOCR e Reconhecedor Local CRNN**: o ONNX Runtime seleciona automaticamente:
+  1. `CUDAExecutionProvider` (GPUs NVIDIA dedicadas em servidores Linux ou Windows com CUDA).
+  2. `DmlExecutionProvider` (GPUs AMD Radeon ou Intel integradas via DirectML no Windows).
+  3. `CPUExecutionProvider` (Fallback automático universal).
+- O endpoint raiz `GET /` expõe o bloco `aceleradores` detalhando os provedores ativos em tempo de execução.
 
 ---
 

@@ -17,6 +17,7 @@ except ImportError:
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
+from .dispositivo import detectar_acelerador_torch
 from .enquadramento import otimizar_enquadramento_crlv
 
 router = APIRouter(tags=["Leitura OCR de Documentos (CRLV)"])
@@ -25,10 +26,11 @@ _ocr_reader: easyocr.Reader | None = None
 
 
 def obter_reader_ocr() -> easyocr.Reader:
-    """Retorna instância singleton do EasyOCR Reader (pt, cpu)."""
+    """Retorna instância singleton do EasyOCR Reader com auto-detecção de GPU/CPU."""
     global _ocr_reader
     if _ocr_reader is None:
-        _ocr_reader = easyocr.Reader(["pt"], gpu=False)
+        tem_gpu, _ = detectar_acelerador_torch()
+        _ocr_reader = easyocr.Reader(["pt"], gpu=tem_gpu)
     return _ocr_reader
 
 
@@ -263,6 +265,8 @@ def analisar_crlv_com_posicao(
     renavam_match = re.search(r"\b\d{11}\b", texto_completo)
 
     return {
+        "motor": "easyocr",
+        "acelerador": detectar_acelerador_torch()[1],
         "formato_crlv_valido": layout_valido and (placa_encontrada is not None) and (renavam_match is not None),
         "placa": placa_encontrada,
         "ancoras_na_posicao": ancoras_validadas,

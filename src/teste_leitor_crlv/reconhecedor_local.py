@@ -6,6 +6,8 @@ import numpy as np
 import onnxruntime as ort
 from PIL import Image
 
+from .dispositivo import detectar_providers_onnx
+
 DIR_PROJETO = Path(__file__).resolve().parent.parent.parent
 DIR_MODELO_PADRAO = DIR_PROJETO / "treinamento" / "modelos"
 
@@ -26,7 +28,8 @@ class ReconhecedorCRNNLocal:
 
         opts = ort.SessionOptions()
         opts.log_severity_level = 3  # Silencia warnings do ONNXRuntime
-        self.session = ort.InferenceSession(str(self.modelo_path), sess_options=opts)
+        providers = detectar_providers_onnx()
+        self.session = ort.InferenceSession(str(self.modelo_path), sess_options=opts, providers=providers)
         self.input_name = self.session.get_inputs()[0].name
 
     @classmethod

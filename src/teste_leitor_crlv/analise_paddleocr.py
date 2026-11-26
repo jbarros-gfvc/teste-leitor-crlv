@@ -20,6 +20,7 @@ from .analise_ocr import (
     delimitar_documento_pelos_textos,
     dentro_da_area,
 )
+from .dispositivo import detectar_providers_onnx
 from .enquadramento import otimizar_enquadramento_crlv
 from .reconhecedor_local import ReconhecedorCRNNLocal, obter_reconhecedor_local
 
@@ -261,6 +262,7 @@ def analisar_crlv_com_paddleocr(
 
     resultado = {
         "motor": modelo_utilizado,
+        "acelerador": detectar_providers_onnx()[0],
         "base_treinamento_local_ativa": reconhecedor_local is not None,
         "formato_crlv_valido": layout_valido and (placa_encontrada is not None) and (renavam_match is not None),
         "placa": placa_encontrada,
