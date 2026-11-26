@@ -178,11 +178,9 @@ Todos os endpoints da API seguem rigorosamente a mesma assinatura raiz para faci
 
 O sistema detecta dinamicamente a presença de aceleradores sem quebrar caso executado apenas em CPU:
 
-- **EasyOCR**: se `torch.cuda.is_available() == True`, inicializa o leitor com `gpu=True`.
-- **PaddleOCR e Reconhecedor Local CRNN**: o ONNX Runtime seleciona automaticamente:
-  1. `CUDAExecutionProvider` (GPUs NVIDIA dedicadas em servidores Linux ou Windows com CUDA).
-  2. `DmlExecutionProvider` (GPUs AMD Radeon ou Intel integradas via DirectML no Windows).
-  3. `CPUExecutionProvider` (Fallback automático universal).
+- **EasyOCR**: se `torch.cuda.is_available() == True`, inicializa o leitor com `gpu=True` (NVIDIA CUDA).
+- **PaddleOCR**: utiliza `device="gpu"` quando `CUDAExecutionProvider` está disponível (NVIDIA CUDA). No caso de GPUs AMD/Intel (DirectML), opera com `device="cpu"` devido a restrição interna do wrapper PaddleX/PaddleOCR (que exige explicitamente CUDA para a flag de GPU).
+- **Reconhecedor Local CRNN**: utiliza aceleração gráfica completa via `DmlExecutionProvider` (AMD Radeon/Intel via DirectX 12) ou `CUDAExecutionProvider` (NVIDIA).
 - O endpoint raiz `GET /` expõe o bloco `aceleradores` detalhando os provedores ativos em tempo de execução.
 
 #### Instalação das Dependências de GPU (Extras)

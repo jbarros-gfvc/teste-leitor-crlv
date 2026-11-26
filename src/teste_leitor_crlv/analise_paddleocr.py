@@ -44,7 +44,8 @@ def obter_reader_paddle(model_dir: str | None = None):
         from paddleocr import PaddleOCR
 
         providers = detectar_providers_onnx()
-        device = "gpu" if providers[0] in ("CUDAExecutionProvider", "DmlExecutionProvider") else "cpu"
+        # PaddleOCR/PaddleX exige estritamente CUDAExecutionProvider para device='gpu'
+        device = "gpu" if "CUDAExecutionProvider" in providers else "cpu"
         kwargs = {"lang": "pt", "engine": "onnxruntime", "device": device}
         if caminho_custom and Path(caminho_custom).exists():
             kwargs["rec_model_dir"] = str(caminho_custom)
